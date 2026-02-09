@@ -5,6 +5,24 @@
   text-align: center;
 }
 
+.app-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.app-header-row h1 {
+  margin: 0;
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
