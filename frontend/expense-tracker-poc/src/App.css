@@ -208,3 +208,19 @@
 .daily-amount {
   font-weight: 500;
 }
+
+/* Income bar chart */
+.income-bar-chart-container {
+  margin-top: 2rem;
+  padding: 1rem 0;
+}
+
+.income-bar-chart-container h3 {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.ag-chart-wrapper {
+  height: 350px;
+  width: 100%;
+}

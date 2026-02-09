@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useEffect, useState, useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { AgCharts } from 'ag-charts-react'
 import './App.css'
 
 const API_BASE = 'http://localhost:8000'
@@ -132,6 +133,154 @@ function App() {
         date, 
         items: items.map(item => ({ ...item, amount: parseFloat(item.amount.toFixed(2)) }))
       }))
+  }, [transactions])
+
+  // Stacked expense bar chart: x = date, y = expense (multiple expenses per date stack)
+  const expenseBarChartOptions = useMemo(() => {
+    const expenses = transactions.filter((t) => t.category.toLowerCase() === 'expense')
+    if (expenses.length === 0) return null
+
+    const byDate: Record<string, Array<{ amount: number; note: string }>> = {}
+    expenses.forEach((t) => {
+      if (!byDate[t.date]) byDate[t.date] = []
+      byDate[t.date].push({
+        amount: parseFloat(t.amount.toFixed(2)),
+        note: t.note || 'No Note'
+      })
+    })
+
+    const maxBars = Math.max(...Object.values(byDate).map((arr) => arr.length))
+    const sortedDates = Object.keys(byDate).sort()
+
+    const data = sortedDates.map((date) => {
+      const items = byDate[date]
+      const row: Record<string, string | number> = { date }
+      items.forEach((item, i) => {
+        row[`amount${i}`] = item.amount
+        row[`note${i}`] = item.note
+      })
+      for (let i = items.length; i < maxBars; i++) {
+        row[`amount${i}`] = 0
+        row[`note${i}`] = ''
+      }
+      return row
+    })
+
+    const series = Array.from({ length: maxBars }, (_, i) => ({
+      type: 'bar' as const,
+      xKey: 'date',
+      yKey: `amount${i}`,
+      yName: 'Expense',
+      legendItemName: 'Expense',
+      stacked: true,
+      fill: COLORS[i % COLORS.length],
+      tooltip: {
+        renderer: ({ datum, yKey }: { datum: Record<string, string | number>; yKey: string }) => {
+          const amount = Number(datum[yKey])
+          if (amount === 0) return {}
+          const noteKey = `note${yKey.replace('amount', '')}`
+          const note = String(datum[noteKey] || 'No Note')
+          return {
+            title: note,
+            data: [{ label: 'Amount', value: `$${amount.toFixed(2)}` }],
+          }
+        },
+      },
+    }))
+
+    return {
+      data,
+      series,
+      background: { fill: '#242424' },
+      theme: {
+        baseTheme: 'ag-default-dark',
+        params: {
+          foregroundColor: 'white',
+          backgroundColor: '#242424',
+          tooltipTextColor: '#242424',
+          tooltipBackgroundColor: 'rgba(255, 255, 255, 0.9)',
+        },
+      },
+      axes: [
+        { type: 'category', position: 'bottom', label: { rotation: -45, color: 'white' }, line: { color: 'white' }, tick: { color: 'white' } },
+        { type: 'number', position: 'left', title: { text: 'Expense ($)', color: 'white' }, label: { color: 'white' }, line: { color: 'white' }, tick: { color: 'white' } },
+      ],
+      legend: { enabled: true, item: { label: { color: 'white' } } },
+    }
+  }, [transactions])
+
+  // Stacked income bar chart: x = date, y = income (multiple incomes per date stack)
+  const incomeBarChartOptions = useMemo(() => {
+    const income = transactions.filter((t) => t.category.toLowerCase() === 'income')
+    if (income.length === 0) return null
+
+    const byDate: Record<string, Array<{ amount: number; note: string }>> = {}
+    income.forEach((t) => {
+      if (!byDate[t.date]) byDate[t.date] = []
+      byDate[t.date].push({
+        amount: parseFloat(t.amount.toFixed(2)),
+        note: t.note || 'No Note'
+      })
+    })
+
+    const maxBars = Math.max(...Object.values(byDate).map((arr) => arr.length))
+    const sortedDates = Object.keys(byDate).sort()
+
+    const data = sortedDates.map((date) => {
+      const items = byDate[date]
+      const row: Record<string, string | number> = { date }
+      items.forEach((item, i) => {
+        row[`amount${i}`] = item.amount
+        row[`note${i}`] = item.note
+      })
+      for (let i = items.length; i < maxBars; i++) {
+        row[`amount${i}`] = 0
+        row[`note${i}`] = ''
+      }
+      return row
+    })
+
+    const series = Array.from({ length: maxBars }, (_, i) => ({
+      type: 'bar' as const,
+      xKey: 'date',
+      yKey: `amount${i}`,
+      yName: 'Income',
+      legendItemName: 'Income',
+      stacked: true,
+      fill: COLORS[i % COLORS.length],
+      tooltip: {
+        renderer: ({ datum, yKey }: { datum: Record<string, string | number>; yKey: string }) => {
+          const amount = Number(datum[yKey])
+          if (amount === 0) return {}
+          const noteKey = `note${yKey.replace('amount', '')}`
+          const note = String(datum[noteKey] || 'No Note')
+          return {
+            title: note,
+            data: [{ label: 'Amount', value: `$${amount.toFixed(2)}` }],
+          }
+        },
+      },
+    }))
+
+    return {
+      data,
+      series,
+      background: { fill: '#242424' },
+      theme: {
+        baseTheme: 'ag-default-dark',
+        params: {
+          foregroundColor: 'white',
+          backgroundColor: '#242424',
+          tooltipTextColor: '#242424',
+          tooltipBackgroundColor: 'rgba(255, 255, 255, 0.9)',
+        },
+      },
+      axes: [
+        { type: 'category', position: 'bottom', label: { rotation: -45, color: 'white' }, line: { color: 'white' }, tick: { color: 'white' } },
+        { type: 'number', position: 'left', title: { text: 'Income ($)', color: 'white' }, label: { color: 'white' }, line: { color: 'white' }, tick: { color: 'white' } },
+      ],
+      legend: { enabled: true, item: { label: { color: 'white' } } },
+    }
   }, [transactions])
 
   async function fetchTransactions() {
@@ -372,6 +521,24 @@ function App() {
             </div>
           )}
         </div>
+
+        {expenseBarChartOptions && (
+          <div className="income-bar-chart-container">
+            <h3>Total Expense by Date</h3>
+            <div className="ag-chart-wrapper">
+              <AgCharts options={expenseBarChartOptions} />
+            </div>
+          </div>
+        )}
+
+        {incomeBarChartOptions && (
+          <div className="income-bar-chart-container">
+            <h3>Total Income by Date</h3>
+            <div className="ag-chart-wrapper">
+              <AgCharts options={incomeBarChartOptions} />
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="card">
