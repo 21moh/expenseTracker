@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import './App.css'
 
 const API_BASE = 'http://localhost:8000'
@@ -12,12 +13,14 @@ type Transaction = {
   note?: string | null
 }
 
-type DailySum = Record<string, number>
+// Color palette for pie chart
+const COLORS = [
+  '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', 
+  '#82CA9D', '#FFC658', '#FF7C7C', '#8DD1E1', '#D084D0'
+]
 
 function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [totalAmount, setTotalAmount] = useState<number>(0)
-  const [dailySums, setDailySums] = useState<DailySum>({})
 
   const [amount, setAmount] = useState<string>('')
   const [category, setCategory] = useState<string>('')
@@ -26,6 +29,110 @@ function App() {
 
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Calculate total expenses
+  const totalExpense = useMemo(() => {
+    return transactions
+      .filter((t) => t.category.toLowerCase() === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0)
+  }, [transactions])
+
+  // Calculate total income
+  const totalIncome = useMemo(() => {
+    return transactions
+      .filter((t) => t.category.toLowerCase() === 'income')
+      .reduce((sum, t) => sum + t.amount, 0)
+  }, [transactions])
+
+  // Calculate expense totals by note for pie chart
+  const expenseNoteData = useMemo(() => {
+    // Filter only expenses (transactions with category "expense")
+    const expenses = transactions.filter((t) => 
+      t.category.toLowerCase() === 'expense'
+    )
+    
+    // Group by note value
+    const noteTotals: Record<string, number> = {}
+    expenses.forEach((t) => {
+      const noteKey = t.note || 'No Note'
+      noteTotals[noteKey] = (noteTotals[noteKey] || 0) + t.amount
+    })
+    
+    return Object.entries(noteTotals).map(([name, value]) => ({
+      name,
+      value: parseFloat(value.toFixed(2)),
+    }))
+  }, [transactions])
+
+  // Calculate income totals by note for pie chart
+  const incomeNoteData = useMemo(() => {
+    // Filter only income (transactions with category "income")
+    const income = transactions.filter((t) => 
+      t.category.toLowerCase() === 'income'
+    )
+    
+    // Group by note value
+    const noteTotals: Record<string, number> = {}
+    income.forEach((t) => {
+      const noteKey = t.note || 'No Note'
+      noteTotals[noteKey] = (noteTotals[noteKey] || 0) + t.amount
+    })
+    
+    return Object.entries(noteTotals).map(([name, value]) => ({
+      name,
+      value: parseFloat(value.toFixed(2)),
+    }))
+  }, [transactions])
+
+  // Calculate daily expenses with notes
+  const dailyExpenses = useMemo(() => {
+    const expenses = transactions.filter((t) => 
+      t.category.toLowerCase() === 'expense'
+    )
+    
+    const dailyGroups: Record<string, Array<{ note: string; amount: number }>> = {}
+    expenses.forEach((t) => {
+      if (!dailyGroups[t.date]) {
+        dailyGroups[t.date] = []
+      }
+      dailyGroups[t.date].push({
+        note: t.note || 'No Note',
+        amount: t.amount
+      })
+    })
+    
+    return Object.entries(dailyGroups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, items]) => ({ 
+        date, 
+        items: items.map(item => ({ ...item, amount: parseFloat(item.amount.toFixed(2)) }))
+      }))
+  }, [transactions])
+
+  // Calculate daily income with notes
+  const dailyIncome = useMemo(() => {
+    const income = transactions.filter((t) => 
+      t.category.toLowerCase() === 'income'
+    )
+    
+    const dailyGroups: Record<string, Array<{ note: string; amount: number }>> = {}
+    income.forEach((t) => {
+      if (!dailyGroups[t.date]) {
+        dailyGroups[t.date] = []
+      }
+      dailyGroups[t.date].push({
+        note: t.note || 'No Note',
+        amount: t.amount
+      })
+    })
+    
+    return Object.entries(dailyGroups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, items]) => ({ 
+        date, 
+        items: items.map(item => ({ ...item, amount: parseFloat(item.amount.toFixed(2)) }))
+      }))
+  }, [transactions])
 
   async function fetchTransactions() {
     try {
@@ -40,31 +147,8 @@ function App() {
     }
   }
 
-  async function fetchTotals() {
-    try {
-      setError(null)
-
-      const [sumRes, dailyRes] = await Promise.all([
-        fetch(`${API_BASE}/transactions/sum`),
-        fetch(`${API_BASE}/transactions/daily-sum`),
-      ])
-
-      if (!sumRes.ok) throw new Error('Failed to load total sum')
-      if (!dailyRes.ok) throw new Error('Failed to load daily sums')
-
-      const sumData: { total_amount: number } = await sumRes.json()
-      const dailyData: DailySum = await dailyRes.json()
-
-      setTotalAmount(sumData.total_amount ?? 0)
-      setDailySums(dailyData)
-    } catch (err) {
-      console.error(err)
-      setError('Could not load totals.')
-    }
-  }
-
   async function refreshAll() {
-    await Promise.all([fetchTransactions(), fetchTotals()])
+    await fetchTransactions()
   }
 
   useEffect(() => {
@@ -132,7 +216,7 @@ function App() {
         <form onSubmit={handleSubmit} className="form">
           <div className="form-row">
             <label>
-              Amount
+              <span className="label-text">Amount</span>
               <input
                 type="number"
                 step="0.01"
@@ -142,18 +226,21 @@ function App() {
               />
             </label>
             <label>
-              Category
-              <input
-                type="text"
+              <span className="label-text">Category</span>
+              <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 required
-              />
+              >
+                <option value="">Select category...</option>
+                <option value="Expense">Expense</option>
+                <option value="Income">Income</option>
+              </select>
             </label>
           </div>
           <div className="form-row">
             <label>
-              Date
+              <span className="label-text">Date</span>
               <input
                 type="date"
                 value={date}
@@ -162,12 +249,12 @@ function App() {
               />
             </label>
             <label>
-              Note
+              <span className="label-text">Note</span>
               <input
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Optional"
+                placeholder="Item"
               />
             </label>
           </div>
@@ -179,23 +266,112 @@ function App() {
 
       <section className="card">
         <h2>Summary</h2>
-        <p>
-          <strong>Total spent:</strong> {totalAmount.toFixed(2)}
-        </p>
 
-        {Object.keys(dailySums).length > 0 && (
-          <>
-            <h3>Daily totals</h3>
-            <ul className="daily-list">
-              {Object.entries(dailySums).map(([d, value]) => (
-                <li key={d}>
-                  <span>{d}</span>
-                  <span>{value.toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-          </>
+        {(expenseNoteData.length > 0 || incomeNoteData.length > 0) && (
+          <div className="pie-charts-wrapper">
+            {expenseNoteData.length > 0 && (
+              <div className="pie-chart-container">
+                <div className="chart-total">
+                  <strong>Total Expense:</strong> ${totalExpense.toFixed(2)}
+                </div>
+                <h3>Expenses by Note</h3>
+                <ResponsiveContainer width="100%" height={450}>
+                  <PieChart margin={{ top: 30, right: 40, bottom: 30, left: 40 }}>
+                    <Pie
+                      data={expenseNoteData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={true}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={75}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {expenseNoteData.map((entry, index) => (
+                        <Cell key={`expense-cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => `$${value.toFixed(2)}`}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {incomeNoteData.length > 0 && (
+              <div className="pie-chart-container">
+                <div className="chart-total">
+                  <strong>Total Income:</strong> ${totalIncome.toFixed(2)}
+                </div>
+                <h3>Income by Note</h3>
+                <ResponsiveContainer width="100%" height={450}>
+                  <PieChart margin={{ top: 30, right: 40, bottom: 30, left: 40 }}>
+                    <Pie
+                      data={incomeNoteData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={true}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={75}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {incomeNoteData.map((entry, index) => (
+                        <Cell key={`income-cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => `$${value.toFixed(2)}`}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
         )}
+
+        <div className="daily-totals-wrapper">
+          {dailyExpenses.length > 0 && (
+            <div className="daily-section">
+              <h3>Daily Expenses</h3>
+              <ul className="daily-list">
+                {dailyExpenses.map(({ date, items }) => (
+                  <li key={`expense-${date}`} className="daily-date-group">
+                    <div className="daily-date-header">{date}</div>
+                    {items.map((item, idx) => (
+                      <div key={`${date}-${idx}`} className="daily-item">
+                        <span className="daily-note">{item.note}</span>
+                        <span className="daily-amount">${item.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {dailyIncome.length > 0 && (
+            <div className="daily-section">
+              <h3>Daily Income</h3>
+              <ul className="daily-list">
+                {dailyIncome.map(({ date, items }) => (
+                  <li key={`income-${date}`} className="daily-date-group">
+                    <div className="daily-date-header">{date}</div>
+                    {items.map((item, idx) => (
+                      <div key={`${date}-${idx}`} className="daily-item">
+                        <span className="daily-note">{item.note}</span>
+                        <span className="daily-amount">${item.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="card">
