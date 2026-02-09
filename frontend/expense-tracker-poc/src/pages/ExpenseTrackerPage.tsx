@@ -473,6 +473,19 @@ export default function ExpenseTrackerPage() {
                   </li>
                 ))}
               </ul>
+              {expenseNoteData.length > 0 && (
+                <div className="note-totals-dashboard">
+                  <h4>Expense totals by note</h4>
+                  <ul className="note-totals-list">
+                    {expenseNoteData.map((entry, index) => (
+                      <li key={`exp-note-${entry.name}-${index}`} className="note-totals-item">
+                        <span className="note-totals-label">{entry.name}</span>
+                        <span className="note-totals-amount">${entry.value.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
           {dailyIncome.length > 0 && (
@@ -491,6 +504,19 @@ export default function ExpenseTrackerPage() {
                   </li>
                 ))}
               </ul>
+              {incomeNoteData.length > 0 && (
+                <div className="note-totals-dashboard">
+                  <h4>Income totals by note</h4>
+                  <ul className="note-totals-list">
+                    {incomeNoteData.map((entry, index) => (
+                      <li key={`inc-note-${entry.name}-${index}`} className="note-totals-item">
+                        <span className="note-totals-label">{entry.name}</span>
+                        <span className="note-totals-amount">${entry.value.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
