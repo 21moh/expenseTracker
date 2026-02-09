@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select, func
 from datetime import date as _date
 from app.db.database import engine
@@ -30,6 +30,23 @@ def create_transaction(
     session.commit()
     session.refresh(transaction)
     return transaction
+
+
+@router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_transaction(
+    transaction_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+):
+    transaction = session.get(Transaction, transaction_id)
+    if not transaction or transaction.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found",
+        )
+    session.delete(transaction)
+    session.commit()
+    return None
 
 
 @router.get("/")

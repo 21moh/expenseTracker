@@ -201,6 +201,29 @@ export default function ExpenseTrackerPage() {
     }
   }, [token, authHeaders])
 
+  const deleteTransaction = useCallback(
+    async (id: number) => {
+      if (!token) return
+      try {
+        setError(null)
+        const res = await fetch(`${API_BASE}/transactions/${id}`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          const msg = typeof data?.detail === 'string' ? data.detail : 'Could not delete transaction.'
+          throw new Error(msg)
+        }
+        setTransactions((prev) => prev.filter((t) => t.id !== id))
+      } catch (err) {
+        console.error(err)
+        setError(err instanceof Error ? err.message : 'Could not delete transaction.')
+      }
+    },
+    [token, authHeaders]
+  )
+
   useEffect(() => {
     fetchTransactions()
   }, [fetchTransactions])
@@ -392,6 +415,7 @@ export default function ExpenseTrackerPage() {
                 <th>Category</th>
                 <th>Amount</th>
                 <th>Note</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -401,6 +425,19 @@ export default function ExpenseTrackerPage() {
                   <td>{t.category}</td>
                   <td>{t.amount.toFixed(2)}</td>
                   <td>{t.note}</td>
+                  <td>
+                    {t.id != null && (
+                      <button
+                        type="button"
+                        className="delete-transaction-btn"
+                        onClick={() => deleteTransaction(t.id!)}
+                        title="Remove"
+                        aria-label={`Remove ${t.category} ${t.amount} ${t.note ?? ''}`}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
