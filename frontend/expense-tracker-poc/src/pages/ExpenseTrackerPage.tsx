@@ -118,7 +118,9 @@ export default function ExpenseTrackerPage() {
       const noteKey = t.note || 'No Note'
       noteTotals[noteKey] = (noteTotals[noteKey] || 0) + t.amount
     })
-    return Object.entries(noteTotals).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+    return Object.entries(noteTotals)
+      .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+      .sort((a, b) => b.value - a.value)
   }, [filteredTransactions])
 
   const incomeNoteData = useMemo(() => {
@@ -128,7 +130,9 @@ export default function ExpenseTrackerPage() {
       const noteKey = t.note || 'No Note'
       noteTotals[noteKey] = (noteTotals[noteKey] || 0) + t.amount
     })
-    return Object.entries(noteTotals).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+    return Object.entries(noteTotals)
+      .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+      .sort((a, b) => b.value - a.value)
   }, [filteredTransactions])
 
   const dailyExpenses = useMemo(() => {
@@ -437,6 +441,17 @@ export default function ExpenseTrackerPage() {
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="note-totals-dashboard note-totals-below-pie">
+                  <h4>Expense totals by note</h4>
+                  <ul className="note-totals-list">
+                    {expenseNoteData.map((entry, index) => (
+                      <li key={`exp-note-${entry.name}-${index}`} className="note-totals-item">
+                        <span className="note-totals-label">{entry.name}</span>
+                        <span className="note-totals-amount expense-amount">${entry.value.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
             {incomeNoteData.length > 0 && (
@@ -452,8 +467,31 @@ export default function ExpenseTrackerPage() {
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="note-totals-dashboard note-totals-below-pie">
+                  <h4>Income totals by note</h4>
+                  <ul className="note-totals-list">
+                    {incomeNoteData.map((entry, index) => (
+                      <li key={`inc-note-${entry.name}-${index}`} className="note-totals-item">
+                        <span className="note-totals-label">{entry.name}</span>
+                        <span className="note-totals-amount income-amount">${entry.value.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
+          </div>
+        )}
+        {expenseBarChartOptions && (
+          <div className="income-bar-chart-container">
+            <h3>Total Expense by Date</h3>
+            <div className="ag-chart-wrapper"><AgCharts options={expenseBarChartOptions} /></div>
+          </div>
+        )}
+        {incomeBarChartOptions && (
+          <div className="income-bar-chart-container">
+            <h3>Total Income by Date</h3>
+            <div className="ag-chart-wrapper"><AgCharts options={incomeBarChartOptions} /></div>
           </div>
         )}
         <div className="daily-totals-wrapper">
@@ -473,19 +511,6 @@ export default function ExpenseTrackerPage() {
                   </li>
                 ))}
               </ul>
-              {expenseNoteData.length > 0 && (
-                <div className="note-totals-dashboard">
-                  <h4>Expense totals by note</h4>
-                  <ul className="note-totals-list">
-                    {expenseNoteData.map((entry, index) => (
-                      <li key={`exp-note-${entry.name}-${index}`} className="note-totals-item">
-                        <span className="note-totals-label">{entry.name}</span>
-                        <span className="note-totals-amount">${entry.value.toFixed(2)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
           {dailyIncome.length > 0 && (
@@ -504,34 +529,9 @@ export default function ExpenseTrackerPage() {
                   </li>
                 ))}
               </ul>
-              {incomeNoteData.length > 0 && (
-                <div className="note-totals-dashboard">
-                  <h4>Income totals by note</h4>
-                  <ul className="note-totals-list">
-                    {incomeNoteData.map((entry, index) => (
-                      <li key={`inc-note-${entry.name}-${index}`} className="note-totals-item">
-                        <span className="note-totals-label">{entry.name}</span>
-                        <span className="note-totals-amount">${entry.value.toFixed(2)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
         </div>
-        {expenseBarChartOptions && (
-          <div className="income-bar-chart-container">
-            <h3>Total Expense by Date</h3>
-            <div className="ag-chart-wrapper"><AgCharts options={expenseBarChartOptions} /></div>
-          </div>
-        )}
-        {incomeBarChartOptions && (
-          <div className="income-bar-chart-container">
-            <h3>Total Income by Date</h3>
-            <div className="ag-chart-wrapper"><AgCharts options={incomeBarChartOptions} /></div>
-          </div>
-        )}
       </section>
       <section className="card">
         <h2>All Transactions</h2>

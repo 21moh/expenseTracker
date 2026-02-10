@@ -326,22 +326,31 @@
   gap: 2rem;
   margin: 2rem 0;
   flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-left: 4rem;
 }
 
 .daily-section {
   flex: 1;
   min-width: 250px;
+  max-width: 50%;
+  text-align: left;
+}
+
+.daily-section:last-of-type {
+  margin-left: 1.5rem;
 }
 
 .daily-section h3 {
   margin-bottom: 1rem;
-  text-align: center;
+  text-align: left;
 }
 
 .daily-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  text-align: left;
 }
 
 .daily-list li {
@@ -417,6 +426,18 @@
 
 .note-totals-amount {
   font-weight: 600;
+}
+
+.note-totals-below-pie {
+  margin-top: 1rem;
+}
+
+.note-totals-below-pie .expense-amount {
+  color: #e74c3c;
+}
+
+.note-totals-below-pie .income-amount {
+  color: #27ae60;
 }
 
 .daily-section:first-of-type .note-totals-dashboard .note-totals-amount {
